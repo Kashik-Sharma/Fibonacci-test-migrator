@@ -4,24 +4,27 @@
 import fibonacci_module as fb         # Custom module made for this project
 import math                           # Math functions (log, pow, sqrt, etc.)
 import matplotlib.pyplot as plt       # Plotting
-plt.style.use('ggplot')
 import pylab
 from scipy.optimize import curve_fit  # Curve fitting
 from sklearn.metrics import mean_squared_error  # Error of fit
 from distutils.util import strtobool  # Translates user answer to Yes/No question to bool
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 FIRSTPOINTS  = int(100)
 PREDICTPOINT = int(500)
 
 # Introduction to user
-print("Welcome!")
+logging.info("Welcome!")
 
 ###############################
 ### (1.)  Graph first 100 (FIRSTPOINTS) Fibonacci numbers
 ###############################
 y = fb.fibList(FIRSTPOINTS)
 x = list(range(1,FIRSTPOINTS+1))  # Adjusts for index starting at 0
-print("Would you like to see a graph of the first", FIRSTPOINTS, "Fibonacci numbers? ")
+logging.info("Would you like to see a graph of the first %d Fibonacci numbers?", FIRSTPOINTS)
 showit = strtobool(input("  [Figure 1]  Y/N: "))
 if showit:
     plt.figure(1)
@@ -31,15 +34,14 @@ if showit:
     plt.title('First ' + str(FIRSTPOINTS) + ' Fibonacci numbers')
     #plt.yscale('log')  # Uncomment to see log graph
     pylab.show(block=False)
-print("\nFrom Figure 1, we can see that the Fibonnaci numbers grow exponentially.")
-
+logging.info("From Figure 1, we can see that the Fibonacci numbers grow exponentially.")
 
 ##############################
 ## (2.) Let's try to fit the data!
 ##############################
-print("Our first thought would be to fit an exponential to this data.")
-print("However, because of the large numbers involved, it's better to fit")
-print("a line to the log of the Fibonacci numbers.")
+logging.info("Our first thought would be to fit an exponential to this data.")
+logging.info("However, because of the large numbers involved, it's better to fit")
+logging.info("a line to the log of the Fibonacci numbers.")
 # Generate the log values of the true Fibonacci numbers
 log_x = x[1:]  # Ignore first fibonacci number b/c log(0) is undefined
 log_y = [math.log(fibNum) for fibNum in y[1:]]
@@ -61,17 +63,17 @@ actual500num = predictList[PREDICTPOINT-1]
 logerror = math.sqrt(mean_squared_error(log_y, fit_y))*math.sqrt(FIRSTPOINTS)
 lower500bound = math.exp(fitlog500prediction-logerror)
 upper500bound = math.exp(fitlog500prediction+logerror)
-print("\nFitting a line to the data, the best fit has slope\n", popt[0], "and y-intercept", popt[1])
+logging.info("Fitting a line to the data, the best fit has slope %f and y-intercept %f", popt[0], popt[1])
 
 # For large n, the slope approaches phi = (1+sqrt(5))/2.  Let's see what we got.
-print("We can compare this to the theoretical limit (applicable for large n),\n  which should yield the golden ratio.")
-print("Compare the fit's prediction: ", math.exp(popt[0]))
-print("     to the golden ratio phi: ", fb.phi)
-print("\nSo after using only", FIRSTPOINTS, "Fibonacci numbers, the fit behavior differs from")
-print("     the theoretical limit by", 100*(1- math.exp(popt[0])/fb.phi), "%")
+logging.info("We can compare this to the theoretical limit (applicable for large n),")
+logging.info("which should yield the golden ratio.")
+logging.info("Compare the fit's prediction: %f", math.exp(popt[0]))
+logging.info("to the golden ratio phi: %f", fb.phi)
+logging.info("So after using only %d Fibonacci numbers, the fit behavior differs from", FIRSTPOINTS)
+logging.info("the theoretical limit by %f %%", 100*(1- math.exp(popt[0])/fb.phi))
 
-print("\nWould you like to see a graph of the line we fit to the \nfirst", FIRSTPOINTS,
-      "Fibonacci numbers, on a log scale? ")
+logging.info("Would you like to see a graph of the line we fit to the first %d Fibonacci numbers, on a log scale?", FIRSTPOINTS)
 showit = strtobool(input("  [Figure 2]  Y/N: "))
 if showit:
     plt.figure(2)
@@ -89,15 +91,12 @@ if showit:
     plt.ylabel('Log of Fibonacci number')
     plt.title('Same graph, extrapolated to predict 500th Fibonacci number')
     pylab.show(block=False)
-print("From Figure 2, we can see that the fit seems to match the first", int(FIRSTPOINTS),"Fibonacci numbers well,")
-print("and extrapolating the fit to predict the", int(PREDICTPOINT),"th Fibonacci number seems pretty good also.")
-print("\nIn fact, the fit predicts the{0:4d}th Fibonacci number to be {1:12E},".format(int(PREDICTPOINT), math.exp(fitlog500prediction)))
-print("  within [{0:12E}, {1:12E}]. \nThe actual value, {2:12E}, is within these bounds.".format( lower500bound, upper500bound, actual500num))
+logging.info("From Figure 2, we can see that the fit seems to match the first %d Fibonacci numbers well,", FIRSTPOINTS)
+logging.info("and extrapolating the fit to predict the %d th Fibonacci number seems pretty good also.", PREDICTPOINT)
+logging.info("In fact, the fit predicts the %d th Fibonacci number to be %12E", PREDICTPOINT, math.exp(fitlog500prediction))
+logging.info("within [%12E, %12E]. The actual value, %12E, is within these bounds.", lower500bound, upper500bound, actual500num)
 
-print("\nNow let us investigate how much the fit is off by.")
-
-
-
+logging.info("Now let us investigate how much the fit is off by.")
 
 #############################
 # (3.) Let's see how well our fit did
@@ -105,5 +104,5 @@ print("\nNow let us investigate how much the fit is off by.")
 fit_differences = [y[nFib-1] - fitFibPrediction(nFib-1,popt[0],popt[1]) for nFib in log_x]
 fit_percent_differences = [(y[nFib-1] - fitFibPrediction(nFib-1,popt[0],popt[1]))/y[nFib-1] for nFib in log_x]
 
-print("We have calculated the fit's prediction of the first", FIRSTPOINTS, "Fibonacci numbers,")
-print("to compare to the actual Fibonacci numbers.")
+logging.info("We have calculated the fit's prediction of the first %d Fibonacci numbers,", FIRSTPOINTS)
+logging.info("to compare to the actual Fibonacci numbers.")
