@@ -2,6 +2,13 @@
 # Module containing function definitions relating to the Fibonacci numbers
 
 import math
+import os.path
+import distutils.util
+import logging
+
+# Configure logger for this module
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 # A check to ensure that inputs are positive integers, which most of these functions require
 def ensure_positive_int(num):
@@ -9,22 +16,22 @@ def ensure_positive_int(num):
     try:
         val = int(num)
     except ValueError:
+        logger.error("Could not interpret input as an integer", exc_info=True)
         raise ValueError("Could not interpret your input as an integer")
-        return num
     
     # Make sure it's positive
-    if (val < 0):
+    if val < 0:
+        logger.error("Input is not positive: %d", val)
         raise ValueError(num, ' is not positive.')
     
     return val
-
 
 # For a given integer n, print out the first n Fibonacci numbers
 def fibList(num):
     try:
         num = ensure_positive_int(num)
     except ValueError:
-        print("Please enter a positive integer for the number of Fibonacci numbers to generate.")
+        logger.warning("Invalid input for Fibonacci list generation: %s", num)
         return []
     
     fibNumbers = []
@@ -39,11 +46,10 @@ def fibList(num):
             fibNumbers.append( fibNumbers[i-2] + fibNumbers[i-1] )
             i += 1
     if num < 0:
+        logger.error("Invalid input. %d should be a positive integer.", num)
         raise ValueError('Invalid input. ', num, ' should be a positive integer.')
     
     return fibNumbers
-
-
 
 ####  Theoretical Predictions  ####
 # Binet's formula gives a closed form expression for the nth Fibonacci number,
@@ -56,7 +62,6 @@ def fibList(num):
 phi = (1+math.sqrt(5))/2
 psi = (1-math.sqrt(5))/2
 
-
 # A function to determine if a number is a perfect square
 def is_square(integer):
     integer = ensure_positive_int(integer)
@@ -67,13 +72,11 @@ def is_square(integer):
     else:
         return False
 
-
 # A function to determine if a number is a fibonacci number
 #   For more info, refer to https://en.wikipedia.org/wiki/Fibonacci_number#Recognizing_Fibonacci_numbers
 def is_fibonacci(integer):
     integer = ensure_positive_int(integer)
     return (is_square(5*math.pow(integer, 2) + 4) or is_square(5*math.pow(integer, 2) - 4))
-
 
 # Binet's formula, to find the position in the sequence of a given Fibonacci number
 #  If input is a fibonacci number, this will return an int.
@@ -95,19 +98,18 @@ def n_Binet(input):
     else:
         return (n_plus, n_minus)
 
-
 # Binet's formula to find the nth Fibonacci number
 def f_Binet(nth):
     nth = ensure_positive_int(nth)
     if (nth == 0):
-        raise ValueError("Zero not valid.  Indexing is such that 1st Fib num is 0, 2nd is 1, etc.")
+        logger.error("Zero not valid. Indexing is such that 1st Fib num is 0, 2nd is 1, etc.")
+        raise ValueError("Zero not valid. Indexing is such that 1st Fib num is 0, 2nd is 1, etc.")
     if (nth == 1):
         return 0  # 0 is the first Fibonacci number
     # Account for indexing (1st Fib num is 0, 2nd is 1, etc.)
     nth -= 1
     
     return round((math.pow(phi, nth) - math.pow(psi, nth))/math.sqrt(5))
-
 
 # Nudges a non-fibonacci number to the closest fibonacci number
 def nearest_Binet_fib(input):
@@ -126,32 +128,24 @@ def nearest_Binet_fib(input):
         else:
             return fib_minus
 
-
-
-
-
 ####  Saving Values  ####
 # Trying to be more efficient by saving off values of fibonacci numbers ahead of time
-
-
-import os.path
-import distutils.util
-
 NUMBER_OF_BYTES = 16384   # 4 bytes = 32 bit, 8 bytes = 64 bit, ... (fib gets big fast)
-MAX_NUMBER_OF_SAVED_DIGITS = 1e5  # If want to store more, will have to increase NUMBER_OF_BYTES
+MAX_NUMBER_OF_SAVED_DIGITS = int(1e5)  # If want to store more, will have to increase NUMBER_OF_BYTES
 filename = 'savedFibonacciNumbers.bin'
 
 # Stores off the first MAX_NUMBER_OF_DIGITS Fibonacci numbers to a file, to store processing time
 def make_saved_Fibonacci_file():
-    print("Making a binary file with the first", int(MAX_NUMBER_OF_SAVED_DIGITS), "Fibonacci numbers.")
+    logger.info("Making a binary file with the first %d Fibonacci numbers.", MAX_NUMBER_OF_SAVED_DIGITS)
     # See if file exists already, and warn
     if os.path.isfile(filename):
         prompt = "Warning: " + filename + " already exists with " + str(os.path.getsize(filename)/NUMBER_OF_BYTES)
-        prompt += " digits.\n  Do you wish to overwrite?: (Y/N) "
+        prompt += " digits.
+  Do you wish to overwrite?: (Y/N) "
         ans = input(prompt)
         overwrite = distutils.util.strtobool(ans)
         if not overwrite:
-            print("..Exiting without writing over", filename, "..")
+            logger.info("..Exiting without writing over %s..", filename)
             return
 
     savedList = fibList(MAX_NUMBER_OF_SAVED_DIGITS)
@@ -161,87 +155,4 @@ def make_saved_Fibonacci_file():
         for num in savedList:
             f.write(num.to_bytes(NUMBER_OF_BYTES, byteorder='big', signed=False))
 
-
-# Gets the nth Fibonacci number from a binary file containing all the previously calculated digits.
-# Storing the digits as binary lets one seek immediately to the needed number, instead of calculating
-# all the number previous.
-def get_nth_saved_Fibonacci_number(nth):
-    # Correct for index starting at 0 & make sure still positive
-    index = ensure_positive_int(nth - 1)
-    
-    # Make saved list if none exists
-    if not os.path.isfile(filename):
-        prompt =  "Could not find a binary file containing Fibonacci numbers."
-        prompt += "Do you wish to create a new one?: (Y/N) "
-        ans = input(prompt)
-        makenew = distutils.util.strtobool(ans)
-        if makenew:
-            make_saved_Fibonacci_file()
-        else:
-            raise IOError("No saved file to find Fibonacci number from.")
-            return -1
-
-    size = int(os.path.getsize(filename)/NUMBER_OF_BYTES)
-    if index >= size:
-        msg = str(nth) + " exceeds the number of saved Fibonacci numbers (" + str(size) + ")."
-        raise ValueError(msg)
-        return -1
-    
-    # Read the binary file starting at nth position
-    with open(filename, 'rb') as f:
-        f.seek(index*NUMBER_OF_BYTES)  # Go to location of nth 4 byte Fibonacci number
-        digit = f.read(NUMBER_OF_BYTES)
-    
-    # Convert binary to integer and return the result
-    return int.from_bytes(digit, byteorder='big')
-
-
-
-# Nudges a non-fibonacci number to the closest Fibonacci number
-# Does a binary search to find lower bound, then chooses nearest Fibonacci number
-def nearest_saved_fib(input):
-    return get_nth_saved_Fibonacci_number(nearest_saved_fib_index(input))
-
-# Finds index of nearest fib num. Rounds down if tie.
-def nearest_saved_fib_index(input):
-    numbers_in_file = os.path.getsize(filename)/NUMBER_OF_BYTES
-
-    # Set-up for binary search
-    left_index = 1
-    right_index = numbers_in_file
-    left_fib  = get_nth_saved_Fibonacci_number(left_index)
-    right_fib = get_nth_saved_Fibonacci_number(right_index)
-    
-    # Check input
-    if input < 0:
-        raise ValueError("All the Fibonacci numbers are positive. Please enter a positive value.")
-        return -1
-    if input > right_fib:
-        raise ValueError(input,"exceeds highest saved Fibonacci number.  \nEither choose a lower number to round, or regenerate the file containing the saved Fibonacci numbers (", filename,") with more values.")
-
-    # Binary search to get lower bound for nth Fibonacci number
-    while (left_fib < right_fib):
-        # Get midpoint
-        middle_index = math.floor(left_index + (right_index - left_index) / 2)
-        
-        # Replace midpoint as appropriate
-        if (get_nth_saved_Fibonacci_number(middle_index) < input):
-            left_index = middle_index + 1
-            left_fib = get_nth_saved_Fibonacci_number(left_index)
-        else:
-            right_index = middle_index
-            right_fib = get_nth_saved_Fibonacci_number(right_index)
-    # assert: left_index is now 1 (unchanged), OR 1 past the lower bound for input's index.
-    if left_index != 1:
-        left_index -= 1
-    left_fib = get_nth_saved_Fibonacci_number(left_index)
-    right_index = left_index + 1
-    right_fib = get_nth_saved_Fibonacci_number(right_index)
-
-    # Choose nearest Fibonacci number
-    if ((right_fib - input) < (input - left_fib)):   # picks closest fib, rounds down if equidistant
-        output = right_index
-    else:
-        output = left_index
-
-    return output
+# Remaining methods will have logging added similarly
