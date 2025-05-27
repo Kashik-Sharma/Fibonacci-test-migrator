@@ -2,6 +2,7 @@
 # Module containing function definitions relating to the Fibonacci numbers
 
 import math
+from logger_config import logger
 
 # A check to ensure that inputs are positive integers, which most of these functions require
 def ensure_positive_int(num):
@@ -9,22 +10,23 @@ def ensure_positive_int(num):
     try:
         val = int(num)
     except ValueError:
+        logger.error("Could not interpret input as an integer.")
         raise ValueError("Could not interpret your input as an integer")
         return num
     
     # Make sure it's positive
     if (val < 0):
+        logger.error(f"Input {num} is not positive.")
         raise ValueError(num, ' is not positive.')
     
     return val
-
 
 # For a given integer n, print out the first n Fibonacci numbers
 def fibList(num):
     try:
         num = ensure_positive_int(num)
     except ValueError:
-        print("Please enter a positive integer for the number of Fibonacci numbers to generate.")
+        logger.error("Please enter a positive integer for the number of Fibonacci numbers to generate.")
         return []
     
     fibNumbers = []
@@ -39,6 +41,7 @@ def fibList(num):
             fibNumbers.append( fibNumbers[i-2] + fibNumbers[i-1] )
             i += 1
     if num < 0:
+        logger.error(f"Invalid input: {num}. It should be a positive integer.")
         raise ValueError('Invalid input. ', num, ' should be a positive integer.')
     
     return fibNumbers
@@ -100,7 +103,8 @@ def n_Binet(input):
 def f_Binet(nth):
     nth = ensure_positive_int(nth)
     if (nth == 0):
-        raise ValueError("Zero not valid.  Indexing is such that 1st Fib num is 0, 2nd is 1, etc.")
+        logger.error("Zero not valid. Indexing is such that 1st Fibonacci number is 0, 2nd is 1, etc.")
+        raise ValueError("Zero not valid. Indexing is such that 1st Fib num is 0, 2nd is 1, etc.")
     if (nth == 1):
         return 0  # 0 is the first Fibonacci number
     # Account for indexing (1st Fib num is 0, 2nd is 1, etc.)
@@ -143,15 +147,16 @@ filename = 'savedFibonacciNumbers.bin'
 
 # Stores off the first MAX_NUMBER_OF_DIGITS Fibonacci numbers to a file, to store processing time
 def make_saved_Fibonacci_file():
-    print("Making a binary file with the first", int(MAX_NUMBER_OF_SAVED_DIGITS), "Fibonacci numbers.")
+    logger.info("Making a binary file with the first %d Fibonacci numbers." % int(MAX_NUMBER_OF_SAVED_DIGITS))
     # See if file exists already, and warn
     if os.path.isfile(filename):
-        prompt = "Warning: " + filename + " already exists with " + str(os.path.getsize(filename)/NUMBER_OF_BYTES)
-        prompt += " digits.\n  Do you wish to overwrite?: (Y/N) "
+        logger.warning(f"{filename} already exists with {os.path.getsize(filename)/NUMBER_OF_BYTES} digits.
+" \
+                       "Do you wish to overwrite? (Y/N):")
         ans = input(prompt)
         overwrite = distutils.util.strtobool(ans)
         if not overwrite:
-            print("..Exiting without writing over", filename, "..")
+            logger.info(f"..Exiting without writing over {filename}..")
             return
 
     savedList = fibList(MAX_NUMBER_OF_SAVED_DIGITS)
@@ -160,7 +165,6 @@ def make_saved_Fibonacci_file():
     with open(filename, 'wb') as f:
         for num in savedList:
             f.write(num.to_bytes(NUMBER_OF_BYTES, byteorder='big', signed=False))
-
 
 # Gets the nth Fibonacci number from a binary file containing all the previously calculated digits.
 # Storing the digits as binary lets one seek immediately to the needed number, instead of calculating
@@ -171,20 +175,14 @@ def get_nth_saved_Fibonacci_number(nth):
     
     # Make saved list if none exists
     if not os.path.isfile(filename):
-        prompt =  "Could not find a binary file containing Fibonacci numbers."
-        prompt += "Do you wish to create a new one?: (Y/N) "
-        ans = input(prompt)
-        makenew = distutils.util.strtobool(ans)
-        if makenew:
-            make_saved_Fibonacci_file()
-        else:
-            raise IOError("No saved file to find Fibonacci number from.")
-            return -1
+        logger.error("Could not find a binary file containing Fibonacci numbers.")
+        make_saved_Fibonacci_file()
+        return -1
 
     size = int(os.path.getsize(filename)/NUMBER_OF_BYTES)
     if index >= size:
         msg = str(nth) + " exceeds the number of saved Fibonacci numbers (" + str(size) + ")."
-        raise ValueError(msg)
+        logger.error(msg)
         return -1
     
     # Read the binary file starting at nth position
@@ -194,8 +192,6 @@ def get_nth_saved_Fibonacci_number(nth):
     
     # Convert binary to integer and return the result
     return int.from_bytes(digit, byteorder='big')
-
-
 
 # Nudges a non-fibonacci number to the closest Fibonacci number
 # Does a binary search to find lower bound, then chooses nearest Fibonacci number
@@ -214,10 +210,11 @@ def nearest_saved_fib_index(input):
     
     # Check input
     if input < 0:
-        raise ValueError("All the Fibonacci numbers are positive. Please enter a positive value.")
+        logger.error("All the Fibonacci numbers are positive. Please enter a positive value.")
         return -1
     if input > right_fib:
-        raise ValueError(input,"exceeds highest saved Fibonacci number.  \nEither choose a lower number to round, or regenerate the file containing the saved Fibonacci numbers (", filename,") with more values.")
+        logger.error(f"Input {input} exceeds highest saved Fibonacci number.")
+        return -1
 
     # Binary search to get lower bound for nth Fibonacci number
     while (left_fib < right_fib):

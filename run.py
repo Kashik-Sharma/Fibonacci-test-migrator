@@ -3,4 +3,8 @@
 #!//anaconda/bin/python
 #!flask/bin/python
 from app import app
-app.run(debug=True)
+from logger_config import logger
+
+if __name__ == "__main__":
+    logger.info("Starting Flask application.")
+    app.run(debug=True)
